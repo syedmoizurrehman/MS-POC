@@ -39,7 +39,7 @@ import GHC.Generics
 
 import Lib
 import Web.Scotty (scotty)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Text.Read (readMaybe)
 
 main :: IO ()
@@ -82,7 +82,7 @@ getConfig :: IO Config
 getConfig = do
   loadFile defaultConfig
   e <- getEnvironment
-  p <- getPort 
+  p <- getPort
   return Config
     { environment = e
     , port = p
@@ -96,8 +96,12 @@ data Config = Config
 
 getPort :: IO Port
 getPort = do
-  port <- lookupEnv "PORT"
-  pure $ maybe (Port 8080) (Port . (fromJust . readMaybe)) port
+  envPort <- lookupEnv "PORT"
+  let port = do
+        portString <- envPort
+        portNumber <- readMaybe portString
+        pure $ Port portNumber
+  pure $ fromMaybe (Port 8080) port
 
 getEnvironment :: IO Environment
 getEnvironment = do
