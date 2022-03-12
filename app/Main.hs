@@ -39,14 +39,15 @@ import GHC.Generics
 
 import Lib
 import Web.Scotty (scotty)
+import Data.Maybe (fromJust)
+import Text.Read (readMaybe)
 
 main :: IO ()
 main = do
   config <- getConfig
-  case config of
-    Config env -> print env
-    -- Data -> undefined
-  scotty 8080 $ do
+  let portNumber = case config of
+        Config _ (Port portNumber) -> portNumber
+  scotty portNumber $ do
     -- Listen for POST requests on the "/users" endpoint
     post "/users" $
       do
@@ -81,26 +82,36 @@ getConfig :: IO Config
 getConfig = do
   loadFile defaultConfig
   e <- getEnvironment
+  p <- getPort 
   return Config
     { environment = e
+    , port = p
     }
 
-newtype Config = Config
+data Config = Config
   {
     environment :: Environment
+    , port :: Port
   }
+
+getPort :: IO Port
+getPort = do
+  port <- lookupEnv "PORT"
+  pure $ maybe (Port 8080) (Port . (fromJust . readMaybe)) port
 
 getEnvironment :: IO Environment
 getEnvironment = do
   m <- lookupEnv "SCOTTY_ENV"
   pure $ maybe Development read m
 
+newtype Port = Port { portNumber :: Int }
+  deriving (Show, Eq)
+
 data Environment
   = Development
   | Production
   | Test
   deriving (Eq, Read, Show)
-
 
 data User = User
   { userId :: Text,
